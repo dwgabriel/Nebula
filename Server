@@ -1,1 +1,0 @@
-Server Module - This module processes (Store, Split, Merge, Package, Verify, Upload) tasks and sends them to serverNodes for computation, and reverts the final product back to Client
