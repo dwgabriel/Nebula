@@ -2,6 +2,8 @@
  * Created by Daryl Wong on 3/14/2019.
  */
 
+import org.apache.commons.io.FilenameUtils;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -82,17 +84,17 @@ public class ClientReceiver extends HttpServlet {
                                                                                                                         // Decoding Received File's Name :
         fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();                                 // MSIE fix. Ensures that the file name itself is returned, not the entire file path.
         InputStream fileContent = filePart.getInputStream();
-        File fileDecode = new File(fileName, URLDecoder.decode(fileName, "UTF-8"));                                // File decode to retrieve file extension (file type - e.g. renderfile.blend / renderfile.3dm)
-        String contentType = getServletContext().getMimeType(fileDecode.getName());   // DOESNT WORK #################
+        String fileExt = FilenameUtils.getExtension(fileName);                                                          // File decode to retrieve file extension (file type - e.g. renderfile.blend / renderfile.3dm)
 
-            //TESTS :
+
+        //TESTS :
             System.out.println("Username : " + userID);
-            System.out.println(fileName + "'s Content Type : "  + contentType);
+            System.out.println(fileName + "'s Content Type : "  + fileExt);
             System.out.println("Application (doPost) : " + application);
 
 
         taskID = String.format(taskIdentity());                                                                     // Encodes task titles with identity and info - ID_User_FileName.extension | 0123_johnDoe_johnsdesign.blend
-            taskName = String.format(taskID + "_" + userID + "_" + fileName + "." + contentType);
+            taskName = String.format(taskID + "_" + userID + "_" + fileName + "." + fileExt);
 
                 taskDatabase = new File(database, taskID);                                                              // Creates a new storage directory for the new task.
                 taskDatabase.mkdir();

@@ -84,8 +84,6 @@ public class Scheduler extends HttpServlet {
         boolean valid = false;
 
         ServletOutputStream out = response.getOutputStream();
-        System.out.println("Application check 3 : " + application);
-
 
         if (nodeIdentity == null) {                                                                                     // Checks nodeIdentity Parameter and if validated, moves on to deviceIdentity Parameter.
             System.out.println("1. Name invalid.");
