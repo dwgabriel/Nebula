@@ -72,64 +72,18 @@ public class Task implements Serializable {
         this.numberOfSubtasks = numberOfSubtasks;
     }
 
-    public ArrayList<Subtask> createSubtasks (File taskDatabase, File outputDir) throws IOException {
+    public ArrayList<Subtask> createSubtasks (File outputDir) throws IOException {
         int subtask_counter = 1;
         ArrayList<Subtask> subtaskQueue = new ArrayList<>();
-        ArrayList<String> allBlenderCL = generateBlenderCL(taskDatabase,outputDir);                                                                     // TODO - Join Subtasks with Scripts for Scheduling ********************************
+//        ArrayList<String> allBlenderCL = generateBlenderCL(taskDatabase,outputDir);                                                                     // TODO - Join Subtasks with Scripts for Scheduling ********************************
+        tileScripts = generateBlenderScript(outputDir);
 
         for (int i=0; i<numberOfSubtasks; i++) {
             String subtaskID = String.format("%s_%03d",taskID, subtask_counter++);
-
-            Subtask subtask = new Subtask(subtaskID, i, original_taskFile, application, tileScripts[i], allBlenderCL.get(i));
+            Subtask subtask = new Subtask(subtaskID, i, original_taskFile, application, tileScripts[i]);
             subtaskQueue.add(subtask);
         }
         return subtaskQueue;
-    }
-
-    public ArrayList<String> generateBlenderCL(File taskDatabase, File outputDir) throws IOException {
-
-        tileScripts = generateBlenderScript(outputDir);
-        File resultDir = new File(taskDatabase + "\\noderesults");
-
-//        docker run -it --rm -v ~/desktop/test:/test ikester/blender test/bmwgpu.blend
-//        --python test/thescript.py -o /test/frame_### -f 1
-
-//        ----------------------------------------------------------------------------------------------------------------
-
-//        docker run -it -v ~/Desktop/Nebula/Code/nebulaserver/nebuladatabase/tasks/054873/originaltask:/originaltask ikester/blender originaltask/blendertest.blend --python originaltask/054873_tileScript__001.py -o ~/Desktop/Nebula/Code/nebula
-//        server/nebuladatabase/tasks/054873/noderesults/tile__001 -f 1
-
-        ArrayList<String> alLBlenderCL = new ArrayList<>();
-
-        for (int i=0; i<tileScripts.length; i++) {
-            ArrayList<String> blenderCL = new ArrayList<>();
-            String outputName = String.format("%s_%03d", "tile_", (i+1));
-            File renderOutput = new File(resultDir, outputName);
-
-            String nodeDir = "/c/Users/Daryl/desktop/nebula/code/nebulanode/taskcache";        // Bind Volume for TaskCache and  Results directory
-            String destinationDir = "/results/";
-            String bindVolume = String.format(nodeDir + ":" + destinationDir);
-
-            blenderCL.add( "bin/bash");
-            blenderCL.add( "-it");
-            blenderCL.add( "--rm");
-            blenderCL.add( "-v");
-            blenderCL.add( bindVolume);
-            blenderCL.add( "--rm");
-            blenderCL.add( original_taskFile.getAbsolutePath());
-            blenderCL.add( "--python");
-            blenderCL.add( tileScripts[i].getAbsolutePath());
-            blenderCL.add( "-o");
-            blenderCL.add( renderOutput.getAbsolutePath());
-            blenderCL.add( "-f");
-            blenderCL.add( "1");                                                                       // TODO - Implement Multi-frame feature *****************************************
-
-            String commandLine = String.format(blenderCL.iterator().toString());
-//            String commandLine = String.format(blenderCL.get(0) + blenderCL.get(1) + blenderCL.get(2) + blenderCL.get(3) + blenderCL.get(4) + blenderCL.get(5) + blenderCL.get(6) + blenderCL.get(7) + blenderCL.get(8) +);
-            System.out.println("Command Line : " + commandLine);
-            alLBlenderCL.add(commandLine);
-        }
-        return alLBlenderCL;
     }
 
     public File[] generateBlenderScript (File outputDir)                                                               // TODO -  Generates a general python script with instructions and information on rendering subtasks with Blender
@@ -223,15 +177,14 @@ public class Task implements Serializable {
         private File originalTaskFile;
         private String application;
         private File tileScript;
-        private String blenderCL;
+
 
 
         public Subtask(String subtaskID,
                        int tileNumber,
                        File originalTaskFile,
                        String application,
-                       File tileScript,
-                       String blenderCL
+                       File tileScript
                        ) {
 
             this.subtaskID = subtaskID;
@@ -239,7 +192,6 @@ public class Task implements Serializable {
             this.originalTaskFile = originalTaskFile;
             this.application = application;
             this.tileScript = tileScript;
-            this.blenderCL = blenderCL;
         }
 
         public String getSubtaskID() {
@@ -262,8 +214,40 @@ public class Task implements Serializable {
             return tileScript;
         }
 
-        public String getBlenderCL() {
-            return blenderCL;
-        }
     }
 }
+
+
+//    public ArrayList<String> generateBlenderCL(File taskDatabase, File outputDir) throws IOException {
+//
+//        tileScripts = generateBlenderScript(outputDir);
+//        File resultDir = new File(taskDatabase + "\\noderesults");
+//
+////        docker run -it --rm -v ~/desktop/test:/test ikester/blender test/bmwgpu.blend
+////        --python test/thescript.py -o /test/frame_### -f 1
+//
+////        ----------------------------------------------------------------------------------------------------------------
+//
+////        docker run -it -v ~/Desktop/Nebula/Code/nebulaserver/nebuladatabase/tasks/054873/originaltask:/originaltask ikester/blender originaltask/blendertest.blend --python originaltask/054873_tileScript__001.py -o ~/Desktop/Nebula/Code/nebula
+////        server/nebuladatabase/tasks/054873/noderesults/tile__001 -f 1
+//
+//        ArrayList<String> alLBlenderCL = new ArrayList<>();
+//
+//        for (int i=0; i<tileScripts.length; i++) {
+//            ArrayList<String> blenderCL = new ArrayList<>();
+//            String outputName = String.format("%s_%s_%03d", taskID + "_", "tile_", (i+1));
+//
+//            blenderCL.add(original_taskFile.getName());
+//            blenderCL.add( "--python");
+//            blenderCL.add("taskcache/" + tileScripts[i].getName());
+//            blenderCL.add( "-o");
+//            blenderCL.add("results/" + outputName);
+//            blenderCL.add( "-f");
+//            blenderCL.add( "1");                                                                       // TODO - Implement Multi-frame feature *****************************************
+//
+//            String commandLine = String.format(blenderCL.iterator().toString());
+//            System.out.println("Command Line : " + commandLine);
+//            alLBlenderCL.add(commandLine);
+//        }
+//        return alLBlenderCL;
+//    }
