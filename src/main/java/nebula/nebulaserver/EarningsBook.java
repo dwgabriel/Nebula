@@ -38,11 +38,11 @@ public class EarningsBook {
             for (int i=0; i<nodesMap.size(); i++) {
                 NodeUser.Node node = nodesMap.get(i);
                 int counter = 1;
-                LinkedHashMap<String, Receiver.SubtaskCosts> nodeCompletedSubtasksMap = node.getCompletedSubtasks();
-                Iterator<Receiver.SubtaskCosts> iterator = nodeCompletedSubtasksMap.values().iterator();
+                LinkedHashMap<String, ResultReceiver.SubtaskCosts> nodeCompletedSubtasksMap = node.getCompletedSubtasks();
+                Iterator<ResultReceiver.SubtaskCosts> iterator = nodeCompletedSubtasksMap.values().iterator();
 
                 while (iterator.hasNext()) {
-                    Receiver.SubtaskCosts subtaskCost = iterator.next();
+                    ResultReceiver.SubtaskCosts subtaskCost = iterator.next();
                     Row row = sheet.createRow(++rowCount);
                     writeBook(node, subtaskCost, row);
                     System.out.println(counter + ". Earnings for Subtask : " +  subtaskCost.getSubtaskID());
@@ -68,7 +68,7 @@ public class EarningsBook {
         return earningsExcel;
     }
 
-    private void writeBook(NodeUser.Node node, Receiver.SubtaskCosts subtaskCost, Row row) {                                            // todo - TO BE RECTIFIED
+    private void writeBook(NodeUser.Node node, ResultReceiver.SubtaskCosts subtaskCost, Row row) {                                            // todo - TO BE RECTIFIED
         Cell cell = row.createCell(0);
         cell.setCellValue(subtaskCost.getSubtaskID());
 

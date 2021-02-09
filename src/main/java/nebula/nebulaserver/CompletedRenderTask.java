@@ -28,10 +28,8 @@ public class CompletedRenderTask {
     String frameCategory;
     String computeMinutes;
     String cost;
-    private static LinkedHashMap<String, String> resultParamsMap = new LinkedHashMap<>();
-    private static LinkedHashMap<String, ArrayList> taskCosts = new LinkedHashMap<>();
-//    private static LinkedHashMap<String, CompletedFrameTask> workingFramesMap = new LinkedHashMap<>();
-//    private static LinkedHashMap<String, CompletedFrameTask> completedFramesMap = new LinkedHashMap<>();
+    private LinkedHashMap<String, String> resultParamsMap = new LinkedHashMap<>();
+    private LinkedHashMap<String, ArrayList> taskCosts = new LinkedHashMap<>();
 
     private final String RootPath = new File("").getAbsolutePath();                                                         // RootDir = server /app directory path
     private final File rootDir = new File(RootPath);
@@ -97,75 +95,6 @@ public class CompletedRenderTask {
         } else {
             System.out.println("[ERROR] Results Database not created properly.");
         }
-
-        // Compiling finalResult of Renders split by frames (each frame is rendered as a whole in Node)
-//        if (subtaskCount == 1) {
-//            Files.copy(fileContent, new File(finalResults, fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
-//            List<File> nodeResultList = listOfResultFiles(resultDir);
-//            List<File> finalResultList = listOfResultFiles(finalResults);
-//            resultDirCheck(nodeResultList);
-//
-//            if (finalResultsCheckpoint(taskID, listOfResultFiles(finalResults))) {
-//                String[] filesToZip = new String[finalResultList.size()];
-//                for (int i = 0; i < finalResultList.size(); i++) {               // TaskID_TotalFrame_Frame_TileCount
-//                    File frameFile = finalResultList.get(i).getAbsoluteFile();
-//                    filesToZip[i] = frameFile.getAbsolutePath();
-//                    System.out.println(frameFile.getName() + " added to Zip File Array");
-//                }
-//                finalResult = zipFiles(resultParamsMap.get("taskID"), filesToZip, resultDir);
-////
-////                handleFinalResult(finalResult,
-////                        resultParamsMap.get("userEmail"),
-////                        resultParamsMap.get("taskID"),
-////                        resultParamsMap.get("taskFileName"));
-//            } else {
-//                System.out.println("Render still incomplete. Final Result Dir Size : " + finalResultList.size());                  // todo - edits made here for finalResults
-//                listOfResultFiles(finalResults);                                                                               // todo - edits made here for finalResults
-//            }
-//
-//            // Compiling finalResult of Renders split by tiles (each frame is rendered as tiles in Node)
-//        } else if (subtaskCount > 1) {
-//            Files.copy(fileContent, new File(frameResults, fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
-//
-//            List<File> resultDirList = listOfResultFiles(resultDir);
-//            List<File> frameResultList = listOfResultFiles(frameResults);
-//            if (frameResultsCheckpoint(frameID, frameResultList)) {
-//
-//                finalResult = compositeTiles(frameResults,
-//                        subtaskCount,
-//                        finalResults,
-//                        frameID,
-//                        resultParamsMap.get("renderOutputType"));
-//
-//                if (finalResult.length() > 0) {
-//                    System.out.println("(LINE 213) FINAL RESULT CHECK |  NAME : " + finalResult.getName() + " | SIZE : " + finalResult.length() + " | LOCATION : " + finalResult.getAbsolutePath());
-//
-//                    List<File> finalResultList = listOfResultFiles(finalResults);
-//                    if (finalResultsCheckpoint(taskID, listOfResultFiles(finalResults))) {                                                              // todo - edits made here for finalResults
-//
-//                        if (resultParamsMap.get("frameCategory").equals("multiFrame")) {
-//                            String[] filesToZip = new String[finalResultList.size()];
-//                            for (int i = 0; i < finalResultList.size(); i++) {               // TaskID_TotalFrame_Frame_TileCount
-//                                File frameFile = finalResultList.get(i).getAbsoluteFile();
-//                                filesToZip[i] = frameFile.getAbsolutePath();
-//                                System.out.println(frameFile.getName() + " added to Zip File Array");
-//                            }
-//                            finalResult = zipFiles(resultParamsMap.get("taskID"), filesToZip, resultDir);
-//                        }
-//
-////                        handleFinalResult(finalResult,
-////                                resultParamsMap.get("userEmail"),
-////                                resultParamsMap.get("taskID"),
-////                                resultParamsMap.get("taskFileName"));
-//                    } else {
-//                        System.out.println("Render still incomplete. Final Result Dir Size : " + finalResultList.size());                          // todo - edits made here for finalResults
-//                        listOfResultFiles(finalResults);                                                                                    // todo - edits made here for finalResults
-//                    }
-//                }
-//            }
-////                // RESULT COMPOSITION AND SORTING SECTION :
-////                // THIS SECTION CHECKS IF SUBTASKS ARE COMPLETED (EACH FRAME), AND THEN IF OVERALL TASK IS COMPLETED (ALL FRAMES)
-//        }
 
         return finalResult;
     }
@@ -247,7 +176,7 @@ public class CompletedRenderTask {
         return zippedFile;
     }
 
-    public static List<File> listOfResultFiles(File results) {
+    public List<File> listOfResultFiles(File results) {
         File[] files;
         if (results.length() > 0) {
             files = results.listFiles();
@@ -277,8 +206,6 @@ public class CompletedRenderTask {
 
     public File resultsCheckpoint (String taskID, String frameID, File frameDir, File finalResultsDir) {
         File finalResult = null;
-//        List<File> frameDirList = listOfResultFiles(frameDir);
-//        List<File> finalResultsDirList = listOfResultFiles(finalResultsDir);
         System.out.println("CompletedRenderTask | Results CheckPoint");
 
             if (resultParamsMap.get("frameCategory").equals("multiFrame") && subtaskCount == 1) {
@@ -370,10 +297,10 @@ public class CompletedRenderTask {
         return finalResultsChecked;
     }
 
-    public static String calculateTotalCost(String taskID) {
+    public String calculateTotalCost(String taskID) {
         double totalCost = 0;
         DecimalFormat costFormat = new DecimalFormat("##.##");
-        ArrayList<Receiver.SubtaskCosts> subtaskCosts = taskCosts.get(taskID);
+        ArrayList<ResultReceiver.SubtaskCosts> subtaskCosts = taskCosts.get(taskID);
 
         for (int i=0; i<subtaskCosts.size(); i++) {
             totalCost += subtaskCosts.get(i).cost;
@@ -383,10 +310,10 @@ public class CompletedRenderTask {
         return costFormat.format(totalCost);
     }
 
-    public static String calculateTotalComputeTime(String taskID) {
+    public String calculateTotalComputeTime(String taskID) {
         double totalComputeTime = 0;
         DecimalFormat timeFormat = new DecimalFormat("#.##");
-        ArrayList<Receiver.SubtaskCosts> subtaskCosts = taskCosts.get(taskID);
+        ArrayList<ResultReceiver.SubtaskCosts> subtaskCosts = taskCosts.get(taskID);
 
         for (int i=0; i<subtaskCosts.size(); i++) {
             totalComputeTime += Double.parseDouble(subtaskCosts.get(i).computeMinutes);
@@ -451,7 +378,7 @@ public class CompletedRenderTask {
         return compositedFrame;
     }
 
-    private static BufferedImage combineImages(BufferedImage bufferedImages[]) {
+    private BufferedImage combineImages(BufferedImage bufferedImages[]) {
         int divisions = (int)Math.sqrt(bufferedImages.length);
         int actualImage = 0;
         // first we establish the width and height of the final image
@@ -463,18 +390,6 @@ public class CompletedRenderTask {
             finalWidth += bufferedImages[i].getWidth();
             finalHeight += bufferedImages[i * divisions].getHeight();
         }
-
-//        static BufferedImage ensureOpaque(BufferedImage bi) {
-//            if (bi.getTransparency() == BufferedImage.OPAQUE)
-//                return bi;
-//            int w = bi.getWidth();
-//            int h = bi.getHeight();
-//            int[] pixels = new int[w * h];
-//            bi.getRGB(0, 0, w, h, pixels, 0, w);
-//            BufferedImage bi2 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-//            bi2.setRGB(0, 0, w, h, pixels, 0, w);
-//            return bi2;
-//        }
 
         System.out.println("Combining images . . . ");
         BufferedImage finalImg = new BufferedImage(finalWidth, finalHeight, BufferedImage.TYPE_INT_RGB);
@@ -510,7 +425,7 @@ public class CompletedRenderTask {
         return finalImg;
     }
 
-    private static void cleanup(File tileDir, File[] inputFiles) {
+    private void cleanup(File tileDir, File[] inputFiles) {
         for(File f: inputFiles) {
             if(!f.delete()) {
                 System.out.println("[ERROR] Unable to delete tmp tile file: " +
@@ -522,119 +437,4 @@ public class CompletedRenderTask {
                     tileDir.getAbsolutePath());
         }
     }
-
-//    public static class CompletedFrameTask {
-//
-//        private String application;
-//        private String taskID;
-//        private String frameID;
-//        private int subtaskCount;
-//        private File frameResultFile;
-//        private LinkedHashMap<String, CompletedSubtask> completedSubtaskMap = new LinkedHashMap<>();
-//
-//        public CompletedFrameTask(
-//                                  String application,
-//                                  String taskID,
-//                                  String frameID,
-//                                  int subtaskCount) {
-//
-//            this.application = application;
-//            this.taskID = taskID;
-//            this.frameID = frameID;
-//            this.subtaskCount = subtaskCount;
-//        }
-//
-//        public void setFrameResultFile(File frameResultFile) {
-//            this.frameResultFile = frameResultFile;
-//        }
-//
-//        public void addNewCompletedSubtask(CompletedSubtask completedSubtask) {
-//
-//            if (completedSubtaskMap.get(completedSubtask.subtaskID) == null) {
-//                completedSubtaskMap.put(completedSubtask.subtaskID, completedSubtask);
-//
-//            } else {
-//                System.out.println("[ERROR] " + completedSubtask.subtaskID + " already exists.");
-//            }
-//        }
-//
-//        public static class CompletedSubtask {
-//
-//            private String nodeEmail;
-//            private String deviceID;
-//            private String ipAddress;
-//            private String taskID;
-//            private String subtaskID;
-//            private String application;
-//            private int subtaskCount;
-//            private File subtaskResultFile;
-//            private String computeMinutes;
-//            private double cost;
-//
-//            public CompletedSubtask(String nodeEmail
-//                    , String deviceID
-//                    , String ipAddress
-//                    , String taskID
-//                    , String subtaskID
-//                    , String application
-//                    , int subtaskCount
-//                    , File subtaskResultFile
-//                    , String computeMinutes
-//                    , double cost) {
-//
-//                this.nodeEmail = nodeEmail;
-//                this.deviceID = deviceID;
-//                this.ipAddress = ipAddress;
-//                this.taskID = taskID;
-//                this.subtaskID = subtaskID;
-//                this.application = application;
-//                this.subtaskCount = subtaskCount;
-//                this.subtaskResultFile = subtaskResultFile;
-//                this.computeMinutes = computeMinutes;
-//                this.cost = cost;
-//            }
-//
-//            public String getNodeEmail() {
-//                return nodeEmail;
-//            }
-//
-//            public String getDeviceID() {
-//                return deviceID;
-//            }
-//
-//            public String getIpAddress() {
-//                return ipAddress;
-//            }
-//
-//            public String getTaskID() {
-//                return taskID;
-//            }
-//
-//            public String getSubtaskID() {
-//                return subtaskID;
-//            }
-//
-//            public String getApplication() {
-//                return application;
-//            }
-//
-//            public int getSubtaskCount() {
-//                return subtaskCount;
-//            }
-//
-//            public File getSubtaskResult() {
-//                return subtaskResultFile;
-//            }
-//
-//            public String getComputeMinutes() {
-//                return computeMinutes;
-//            }
-//
-//            public double getCost() {
-//                return cost;
-//            }
-//
-//        }
-//
-//    }
 }

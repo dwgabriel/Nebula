@@ -22,7 +22,7 @@ import java.util.*;
 
 @WebServlet(
         name = "TaskReceiver",
-        urlPatterns = {"/newTask"}
+        urlPatterns = {"/upload"}
 )
 public class TaskReceiver extends HttpServlet {
 
@@ -37,31 +37,6 @@ public class TaskReceiver extends HttpServlet {
     Deque<Task> taskQueue = new LinkedList<>();
 
     // This class acts as the reception to receive new tasks from the web-app. Parameters of the new task should include the Application to be used and Data of the task to be parallelized and distributed to Nodes.
-
-    // The doGet method will be called from other classes to get parameters/information about the task request for parallelization.
-//    @Override
-//    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-//        if (request == null) {
-//
-//            System.out.println("[ERROR] - REQUEST NULL");
-//            response.sendError(response.SC_BAD_REQUEST, "BAD REQUEST | PARAMETER REQUIRED");
-//        } else if (request != null && taskQueue.size() > 0) {
-//            System.out.println("TASK QUEUE SIZE : " + taskQueue.size());
-//            Task task = taskQueue.peek();
-//
-//            response.setHeader("Task-Identity", task.getTaskID());
-//            taskQueue.remove();
-//
-//        }  else if (request != null && taskQueue.size() <= 0) {                                                         // NO TASKS
-//            System.out.println("TASK RECEIVER (doGet) : There are no tasks to compute at this moment.");
-//            System.out.println("TASK QUEUE SIZE : " + taskQueue.size());
-//            response.setHeader("Task-Identity", "null");
-//        }
-//
-//        int status = response.getStatus();
-//        System.out.println("STATUS CODE : " + status);
-//        System.out.println("-------- (UPLOAD RECEIVER - doGet) --------");
-//    }
 
     // putTask sends a PUT request to Scheduler class to update the SubtaskPackageQueue with new TaskIDs for scheduling.
     private void putTask(Task task) {
@@ -90,15 +65,14 @@ public class TaskReceiver extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         LinkedHashMap<String, String> taskParamsMap = readJsonTaskParams(request.getReader());
 
-//        application = taskParamsMap.get("application");
         Task task = new Task(taskParamsMap);
         putTask(task);
-        System.out.println("TASK_RECEIVER | " + task.getTaskID() + " added to queue.");
+        System.out.println("TASK_RECEIVER | " + task.getTaskID() + " added to Scheduler queue.");
 
         response.setStatus(HttpServletResponse.SC_OK);
     }
 
-    private static LinkedHashMap<String, String> readJsonTaskParams (BufferedReader reader) throws IOException {
+    private LinkedHashMap<String, String> readJsonTaskParams (BufferedReader reader) throws IOException {
         StringBuffer jsonString = new StringBuffer();
         LinkedHashMap<String, String> taskParams;
         String line = null;
@@ -106,14 +80,14 @@ public class TaskReceiver extends HttpServlet {
             BufferedReader bufferedReader = reader;
             while ((line = reader.readLine()) != null)
                 jsonString.append(line);
-        } catch (Exception e) { /*report an error*/ }
 
-        try {
             JSONObject jsonObject =  HTTP.toJSONObject(jsonString.toString());
             System.out.println("JB STRING : " + jsonString);
             taskParams = extractJsonTaskParams(jsonString.toString());
             System.out.println("JSON OBJECT : " + jsonObject);
+
         } catch (JSONException e) {
+            e.printStackTrace();
             throw new IOException("Error parsing JSON request string");
         }
 
@@ -122,7 +96,7 @@ public class TaskReceiver extends HttpServlet {
 
     //  The extractJsonTaskParams is paramount to ensuring the right task information is passed to create the right tasks.
     //  The method will extract and define the 'application' parameter to decide what Key and Value are to be added into the taskParamsMap to be passed to the Task Class.
-    private static LinkedHashMap<String, String> extractJsonTaskParams (String jsonParam) {
+    private LinkedHashMap<String, String> extractJsonTaskParams (String jsonParam) {
         ArrayList<String> params = new ArrayList<>();
         LinkedHashMap<String, String> map = new LinkedHashMap<>();
 
@@ -131,7 +105,7 @@ public class TaskReceiver extends HttpServlet {
         Scanner scanner = new Scanner(s);
         scanner.useDelimiter(",");
         int counter=0;
-        while(scanner.hasNext()) {
+        while (scanner.hasNext()) {
             params.add(counter, scanner.next());
             counter++;
         }
@@ -148,8 +122,19 @@ public class TaskReceiver extends HttpServlet {
             map.put("endFrame", params.get(6));
             map.put("renderOutputType", params.get(7));
             map.put("computeRate", params.get(8));
+
         } else if (jsonParam.contains("vray")) {
-            // 1. Extract Params for VRAY TASK
+            map.put("taskID", params.get(0));
+            map.put("userEmail", params.get(1));
+            map.put("shareLink", params.get(2));
+            map.put("application", params.get(3));
+            map.put("frameCategory", params.get(4));
+            map.put("startFrame", params.get(5));
+            map.put("endFrame", params.get(6));
+            map.put("renderOutputType", params.get(7));
+            map.put("computeRate", params.get(8));
+            map.put("renderHeight", params.get(9));
+            map.put("renderWidth", params.get(10));
         }
 
         System.out.println("UPLOAD PARAMS : ");

@@ -22,7 +22,7 @@ import java.util.List;
 public class NodeUpdater extends HttpServlet {
 
     final DbxRequestConfig config = DbxRequestConfig.newBuilder("dropbox/nebula-update").build();
-    final DbxClientV2 client = new DbxClientV2(config, "rM8fF-GuUNAAAAAAAAAAK6ksJER9acjYeF1krFbX63InD8wn_Iq-5fDlV_1YM6gh");
+    final DbxClientV2 client = new DbxClientV2(config, Server.dbxToken);
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

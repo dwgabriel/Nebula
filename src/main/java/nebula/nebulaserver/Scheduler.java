@@ -1,7 +1,5 @@
 package nebula.nebulaserver;
 
-import com.dropbox.core.DbxRequestConfig;
-import com.dropbox.core.v2.DbxClientV2;
 import org.apache.http.conn.util.InetAddressUtils;
 
 import javax.servlet.ServletException;
@@ -30,15 +28,12 @@ import java.util.zip.ZipOutputStream;
 
 public class Scheduler extends HttpServlet {
 
-    private static String RootPath = new File("").getAbsolutePath();
-    private static File rootDir = new File(RootPath);
-    private static File database = new File(rootDir, "nebuladatabase");
-    final DbxRequestConfig config = DbxRequestConfig.newBuilder("dropbox/nebula-update").build();
-    final DbxClientV2 client = new DbxClientV2(config, "rM8fF-GuUNAAAAAAAAAAK6ksJER9acjYeF1krFbX63InD8wn_Iq-5fDlV_1YM6gh");
+    private String RootPath = new File("").getAbsolutePath();
+    private File rootDir = new File(RootPath);
+    private File database = new File(rootDir, "nebuladatabase");
     final File taskDatabase = new File(database, "tasks");
     final File schedulerCache = new File(database, "schedulercache");
-    String uploadServlet = "https://nebula-server.herokuapp.com/upload";
-    String taskServlet = "https://nebula-server.herokuapp.com/newTask";
+    String taskServlet = "https://nebula-server.herokuapp.com/upload";
 
     private final String latestNodeVersion = "1.0.22";
     private String subtaskParams;
@@ -47,29 +42,6 @@ public class Scheduler extends HttpServlet {
     private final String[] filesToZip = new String[1];
     private Deque<SubtaskPackage> subtaskPackageQueue = new ArrayDeque<>();
     private ArrayList<String> activeNodes = new ArrayList<>();
-
-//    public String getInfo() throws IOException { // Retrieves information from server. (Works)
-//        CloseableHttpClient httpClient = HttpClients.createDefault();
-//
-//        HttpUriRequest request = RequestBuilder
-//                .get(taskServlet)
-//                .build();
-//
-//        String taskIdentity;
-//        CloseableHttpResponse response = httpClient.execute(request);
-//        try {
-//            taskIdentity = response.getFirstHeader("Task-Identity").getValue();
-//            System.out.println("TASK IDENTITY (getInfo) : " + taskIdentity);
-//            if (taskIdentity.equals("null")) {
-//                return null;
-//            } else {
-//                return taskIdentity;
-//            }
-//
-//        } finally {
-//            response.close();
-//        }
-//    }
 
     // doGet receives requests from the Rescheduler class to update the SubtaskPackageQueue with tasks that needs to be re-scheduled.
     @Override
@@ -88,16 +60,20 @@ public class Scheduler extends HttpServlet {
 
             File taskDir = new File(taskDatabase, this_taskID);
             File subtaskDir = new File(taskDir, "subtasks");
-            File originalTaskDir = new File(taskDir, "originaltask");
+            File renderfileDir = new File(taskDir, "renderfile");
             System.out.println("Re-scheduling in 2 . . . ");
 
             File[] subtaskArray = subtaskDir.listFiles();
-            File[] originalTaskArray = originalTaskDir.listFiles();
-            System.out.println("Re-scheduling in 1 . . . ");
-            if (subtaskDir != null && subtaskArray.length > 0) {
+            File[] renderfileArray = renderfileDir.listFiles();
+            if (subtaskArray.length > 0) {
+                System.out.println("Re-scheduling in 1 . . . ");
+
                 for (int i = 0; i < subtaskArray.length; i++) {
-                    if (subtaskArray[i].getName().contains(this_subtaskID)) {
-                        subtaskPackageQueue.addFirst(new SubtaskPackage(subtaskArray[i].getAbsoluteFile(), originalTaskArray[0].getAbsoluteFile()));
+                    System.out.println("Re-scheduling . . .");
+                    File file = subtaskArray[i].getAbsoluteFile();
+                    if (file.getName().contains(this_subtaskID)) {
+                        System.out.println("File : " + file.getName());
+                        subtaskPackageQueue.addFirst(new SubtaskPackage(subtaskArray[i].getAbsoluteFile(), renderfileArray[0].getAbsoluteFile()));
                         System.out.println(this_subtaskID + " has been re-added to the Task Queue - Due for re-scheduling immediately.");
                     }
                 }
@@ -118,18 +94,15 @@ public class Scheduler extends HttpServlet {
         if (taskID != null) {
             System.out.println("SCHEDULER | New Task Request - Task Identity : " + taskID);
             File taskDir = new File(taskDatabase, taskID);
-            File originalTaskDir = new File(taskDir, "originaltask");
+            File renderfileDir = new File(taskDir, "renderfile");
             File subtaskDir = new File(taskDir, "subtasks");
+            File[] renderfileArray = renderfileDir.listFiles();
             File[] subtaskArray = subtaskDir.listFiles();
-            System.out.println("SCHEDULER | Subtask Dir : " + subtaskDir.getAbsolutePath());
-            System.out.println("SCHEDULER | Subtask Dir Length : " + subtaskDir.length());
-            System.out.println("SCHEDULER | Subtask Array : " + subtaskArray.length);
+
             Arrays.sort(subtaskArray);
-            File[] originalTaskArray = originalTaskDir.listFiles();
 
             for (int i = 0; i < subtaskDir.listFiles().length; i++) {
-                System.out.println("SUBTASK_DIR | " + i + ". " + subtaskArray[i].getName());
-                SubtaskPackage subtaskPackage = new SubtaskPackage(subtaskArray[i].getAbsoluteFile(), originalTaskArray[0].getAbsoluteFile());
+                SubtaskPackage subtaskPackage = new SubtaskPackage(subtaskArray[i].getAbsoluteFile(), renderfileArray[0].getAbsoluteFile());
                 subtaskPackageQueue.add(subtaskPackage);
             }
         } else {
@@ -142,10 +115,10 @@ public class Scheduler extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException { // Nodes will post Node information to Server as request for more jobs.
 
         String nodeEmail    = request.getParameter("Node-Email");                                                      // Retrieve <input type="text" name="username"> - Username of Node Supplier User
-        String nodeVersion  = request.getParameter("Version");
         String deviceID     = request.getParameter("Device-Identity");                                                    // Retrieve <input type="text" name="deviceID"> - Identity of device being supplied by Supply User
         String ipAddress    = request.getParameter("IP-Address");
         String nodeQueue    = request.getParameter("Queue");                                                    // Retrieve <input type="text" name="queue"> -  Status of device job queue
+        String nodeVersion  = request.getParameter("Version");
         String nodeScore    = "95";
 
         NodeUser nodeUser = new NodeUser(nodeEmail);
@@ -159,32 +132,29 @@ public class Scheduler extends HttpServlet {
             System.out.println("[NODE UNVERIFIED]");
         } else {
 
-                    // TASK ID RETRIEVAL : This section of code calls the UploadReceiver with "getInfo" to obtain the next TaskID in queue for rendering.
-                    // It checks the originalTask and Subtask Directories of the given TaskID for jobs.
-                    // It only proceeds if the subtaskPackageQueue is empty, otherwise the Scheduler moves on to the next block of code to schedule jobs.
-                    // Based on the TaskID given, it will determine if the assigned Task is a Multi-frame or Single-frame render and add it into the subtaskPackageQueue accordingly for scheduling.
-                    int taskExists = 0;                                                                                 // boolean taskExists lets Nodes know there is a task to process, otherwise continue pinging server.
+//                    int taskExists = 0;                                                                                 // boolean taskExists lets Nodes know there is a task to process, otherwise continue pinging server.
                     if (subtaskPackageQueue.size() == 0) {
                         System.out.println("There are no tasks to compute at this time.");
                         out.write("There are no tasks to compute at this time.".getBytes("UTF-8"));
-                        response.addHeader("Task-Exist", String.valueOf(taskExists));
+                        response.addHeader("Subtask-Params", "null");
+//                        response.addHeader("Task-Exist", String.valueOf(taskExists));
                     } else {
                         try {
-                            taskExists = 1;
+//                            taskExists = 1;
                             SubtaskPackage subtaskPackage = subtaskPackageQueue.peek();
                             System.out.println("SCHEDULER | Subtask Package : " + subtaskPackage.getScriptName());
                             subtaskPackageQueue.remove(subtaskPackage);                         // TODO - CHANGES MADE HERE
                             // Subtasks are packaged into subtaskPackages for scheduling, and placed into a queue. Job requests from Node will peek at the queue using the FIFO method to schedule.
                             // Scheduled jobs will set the 'assigned' boolean to true to avoid double-scheduling, but more importantly to ensure those 'unassigned' will continue to be scheduled if skipped.
 
-                            // GET Subtask Metadata from OriginalTaskFile
+                            // GET Subtask Metadata from Renderfile
                             subtaskParams = getMetadata(subtaskPackage.script.toPath(), "Subtask-Params");
                             subtaskID = getMetadata(subtaskPackage.script.toPath(), "Subtask-ID");
                             System.out.println("SCHEDULER | Subtask Params : " + subtaskParams);
 
                             // SET Headers to supply render-critical information to Nodes pinging the Server for jobs
                             response.reset();
-                            response.addHeader("Task-Exist", String.valueOf(taskExists));
+//                            response.addHeader("Task-Exist", String.valueOf(taskExists));
                             response.addHeader("Subtask-Params", subtaskParams);
                             response.addHeader("Task-Package", "attachment; filename=\"test-arc.zip\"");
 
@@ -193,7 +163,7 @@ public class Scheduler extends HttpServlet {
                             response.setStatus(HttpServletResponse.SC_OK);
 
                             filesToZip[0] = subtaskPackage.script.getAbsolutePath();
-//                                        filesToZip[1] = subtaskPackage.originalTaskFile.getAbsolutePath();
+                            // filesToZip[1] = subtaskPackage.renderfile.getAbsolutePath();
                             File zippedSubtaskPackage = zipFiles(subtaskID, filesToZip);
                             BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(zippedSubtaskPackage));              // InputStream of Renderfile
                             byte[] buffer = new byte[(int) zippedSubtaskPackage.length()];
@@ -205,7 +175,7 @@ public class Scheduler extends HttpServlet {
                             inputStream.close();
                             out.flush();
                             out.close();
-                            taskExists = 0;
+//                            taskExists = 0;
 
                         } catch (IOException io) {
                             io.printStackTrace();
@@ -217,12 +187,7 @@ public class Scheduler extends HttpServlet {
 
     private boolean verifyNode (NodeUser.Node node, ServletOutputStream outputStream) throws IOException {
         boolean verified = false;
-        boolean name = false;
-        boolean device = false;
-        boolean score = false;
-        boolean latestVersion = false;
-        boolean ipValid = false;
-        boolean queue = false;
+
         System.out.println("---- Node Verification for " + node.getNodeEmail() + " (SCHEDULER - verifyNode) -----------------");
 
         if (node.getNodeEmail() == null || node.getNodeEmail().isEmpty()) {                                                                                     // Checks nodeEmail Parameter and if validated, moves on to deviceIdentity Parameter.
@@ -230,7 +195,6 @@ public class Scheduler extends HttpServlet {
             outputStream.write("Your username is invalid.".getBytes("UTF-8"));
 
         } else {
-            name = true;
             System.out.println("1. Node Email : " + node.getNodeEmail());
 
             if (!node.getProductVersion().contains(latestNodeVersion)) {
@@ -239,16 +203,13 @@ public class Scheduler extends HttpServlet {
                 outputStream.write(updateMessage.getBytes("UTF-8"));
 
             } else if (node.getProductVersion().contains(latestNodeVersion)) {
-                latestVersion = true;
                 System.out.println("2. Node Product Version is updated. Node Version : " + node.getProductVersion());
 
-                if (node.getDeviceID() == null || node.getDeviceID().isEmpty()) { // || node.getDeviceID().contains("O.E.M")) {                                                                          // Checks deviceIdentity Parameter and if validated, moves on to nodeScore Parameter.
-                    device = false;
+                if (node.getDeviceID() == null || node.getDeviceID().isEmpty() || node.getDeviceID().contains("O.E.M")) {                                                                          // Checks deviceIdentity Parameter and if validated, moves on to nodeScore Parameter.
                     System.out.println("3. Device Identity invalid.");
                     outputStream.write("Your Device ID is invalid.".getBytes("UTF-8"));
 
                 } else {
-                    device = true;
                     System.out.println("3. Device Identity : " + node.getDeviceID());
 
                     if (!InetAddressUtils.isIPv4Address(node.getIpAddress()) && !InetAddressUtils.isIPv6Address(node.getIpAddress())) {
@@ -256,7 +217,6 @@ public class Scheduler extends HttpServlet {
                         outputStream.write("Your IP Address is invalid.".getBytes("UTF-8"));
 
                     } else if (InetAddressUtils.isIPv4Address(node.getIpAddress()) || InetAddressUtils.isIPv6Address(node.getIpAddress())) {
-                        ipValid = true;
                         System.out.println("4. IP Address : " + node.getIpAddress());
 
 
@@ -265,7 +225,6 @@ public class Scheduler extends HttpServlet {
                         outputStream.write("Your Node Score is invalid / too low.".getBytes("UTF-8"));
 
                     } else if (Integer.valueOf(node.getScore()) >= 70) {
-                        score = true;
                         System.out.println("5. Node Score : " + node.getScore());
 
                             if (node.getNodeQueue() > 0) {                                                    // Checks nodeQueue Parameter and if validated, all necessary gateway Parameters are valid and Subtasks can be scheduled to Node.
@@ -275,13 +234,9 @@ public class Scheduler extends HttpServlet {
                                 outputStream.close();
 
                             } else {
-                                while (node.getNodeQueue() < 1) {
-                                    queue = true;
                                     verified = true;
                                     System.out.println("6. Node Queue : " + node.getNodeQueue());
                                     System.out.println(node.getNodeEmail() + " is verified.");
-                                    break;
-                                }
                             }
                         }
                     }
@@ -314,20 +269,6 @@ public class Scheduler extends HttpServlet {
             System.out.println("Zip File Name : " + zipFileName);
             zippedFile = new File(schedulerCache, zipFileName);
             ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zippedFile)));
-
-
-//            public void zipFile(File srcFile, File zipFile) throws IOException {
-//                try (FileInputStream fis = new FileInputStream(srcFile);
-//                     ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
-//                    zos.putNextEntry(new ZipEntry(srcFile.getName()));
-//                    int len;
-//                    byte[] buffer = new byte[1024];
-//                    while ((len = fis.read(buffer)) > 0) {
-//                        zos.write(buffer, 0, len);
-//                    }
-//                    zos.closeEntry();
-//                }
-//            }
 
             for (String aFile : filePaths) {
                 File file = new File(aFile);
@@ -367,92 +308,13 @@ public class Scheduler extends HttpServlet {
         return metaValue;
     }
 
-    public boolean checkNodeID(NodeUser.Node node) { /// TODO - DOES NOT WORK
-        boolean exists = false;
-        if (!activeNodes.isEmpty()) {
-            for (int i=0; i<activeNodes.size(); i++) {
-                String nodeEmailIdentifier = node.getNodeEmail() + "_" + i;
-                if (activeNodes.get(i) == nodeEmailIdentifier) {
-                    exists = true;
-                } else {
-                    exists = false;
-                }
-            }
-        } else {
-            exists = false;
+    public void printFilesInDir(File dir) {
+        File[] files = dir.listFiles();
+        System.out.println(" FILES IN DIR : " + dir.getName());
+        for (int i=0; i<files.length; i++) {
+            System.out.println(dir.getName() + " | " + i + ". " + files[i].getName());
         }
-
-        return exists;
-    }
-
-//    public void addTester(NodeUser.Node node) {  /// TODO - DOES NOT WORK
-//        int nodeIndex = 1;
-//        if (checkNodeID(node)) {
-//            nodeIndex++;
-////            System.out.println(node.deviceID + " already exists.");
-//            activeNodes.add(node.getNodeEmail() + "_" + nodeIndex);
-//        } else {
-//            activeNodes.add(node.getNodeEmail() + "_" + nodeIndex);
-//            System.out.println(node.getDeviceID() + " added to Active Nodes.");
-//        }
-//    }
-
-//    public String checkNodeUpdateConfigURL() {
-//        String url = null;
-//        try {
-//            ListFolderResult listing = client.files().listFolderBuilder("/Node Update").start();
-//
-//            for (Metadata child : listing.getEntries()) {
-//                System.out.println(child.getName());
-//
-//                if (child.getName().equals("node-update-config.txt")) {
-//                    String path = child.getPathLower();
-//                    url = getShareLink(path);
-//                    System.out.println("Node Update URL : " + url);
-//                } else {
-//                    System.out.println("Node Update URL not found.");
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        return url;
-//    }
-//
-//    public String getShareLink(String path) {
-//        try {
-//            String url;
-//
-//            DbxUserSharingRequests share = client.sharing();
-//            ListSharedLinksResult linksResult = client.sharing().listSharedLinksBuilder()
-//                    .withPath(path)
-////                    .withDirectOnly(true)
-//                    .start();
-//
-//            List<SharedLinkMetadata> links = linksResult.getLinks();
-//
-//            if (links.size() > 0) {
-//                url = links.get(0).getUrl();
-//            } else {
-//                SharedLinkSettings settings = new SharedLinkSettings(RequestedVisibility.PUBLIC, null, null, null, RequestedLinkAccessLevel.VIEWER);
-//                SharedLinkMetadata metadata = share.createSharedLinkWithSettings(path, settings);
-//                url = metadata.getUrl();
-//            }
-//            return url.replace("?dl=0", "?dl=1");
-//
-//        }  catch (Exception ex) {
-//            ex.printStackTrace();
-//            return null;
-//        }
-//    }
-
-    public void printActiveNodes () {
-        System.out.println("---- ACTIVE NODES (SCHEDULER - printActiveNodes ----");
-        for (int i=0; i<activeNodes.size(); i++) {
-            System.out.println(i + ". " + activeNodes.get(i));
-        }
-        System.out.println("------ (SCHEDULER - printActiveNodes) ------");
+        System.out.println(" --- print end ---");
     }
 
     public void printTaskInfo(String taskID, String subtaskID, String nodeEmail) {
@@ -465,12 +327,12 @@ public class Scheduler extends HttpServlet {
 
     public class SubtaskPackage {
         File script;
-        File originalTaskFile;
+        File renderfile;
         boolean assigned = false;
 
-        public SubtaskPackage(File script, File originalTaskFile) {
+        public SubtaskPackage(File script, File renderfile) {
             this.script = script;
-            this.originalTaskFile = originalTaskFile;
+            this.renderfile = renderfile;
             this.assigned = false;
         }
 

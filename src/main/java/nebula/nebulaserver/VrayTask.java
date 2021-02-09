@@ -1,12 +1,14 @@
 package nebula.nebulaserver;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 
-/**
- * Created by Daryl Wong on 7/21/2019.
- */
-public class BlenderTask implements Serializable {
+public class VrayTask {
 
     // COMMON PARAMETERS :
 //    private final int multiplier = 0;        //TODO - DYNAMIC MULTIPLIER CALCULATOR                                                                           // Multiple that decides number of tiles. Fed as a parameter to calcTileBorders();
@@ -24,22 +26,23 @@ public class BlenderTask implements Serializable {
     public String renderOutputType;
     public String shareLink;
     public String renderfileName;
-    private ArrayList<blenderFrameTask> frameTasks = new ArrayList<>();
+    public int renderHeight;
+    public int renderWidth;
+    private ArrayList<vrayFrameTask> frameTasks = new ArrayList<>();
 
-    // NEW TASK         - TaskID, UserEmail, Application, numberOfSubtasks, frame, renderfile, tileScripts, renderfileDir, subtaskDir
-    // Completed TASK   - TaskID, UserEmail, Application, numberOfSubtasks, frame, renderResults, Cost, ComputeHours
-
-    public BlenderTask (String taskID,
-                        String userEmail,
-                        String application,
-                        String frameCategory,
-                        int startFrame,
-                        int endFrame,
-                        String renderOutputType,
-                        String shareLink,
-                        int computeRate,
-                        String renderfileName,
-                        File subtaskDir) throws IOException {
+    public VrayTask(String taskID,
+                    String userEmail,
+                    String application,
+                    String frameCategory,
+                    int startFrame,
+                    int endFrame,
+                    String renderOutputType,
+                    String shareLink,
+                    int computeRate,
+                    String renderfileName,
+                    String renderHeight,
+                    String renderWidth,
+                    File subtaskDir) throws IOException {
 
         this.taskID = taskID;
         this.userEmail = userEmail;
@@ -52,6 +55,8 @@ public class BlenderTask implements Serializable {
         this.renderfileName = renderfileName;
         this.frameCount = this.endFrame - this.startFrame + 1;
         this.computeRate = computeRate;
+        this.renderHeight = Integer.parseInt(renderHeight);
+        this.renderWidth = Integer.parseInt(renderWidth);
         createFrameTasks(taskID,
                 frameCategory,
                 startFrame,
@@ -82,11 +87,12 @@ public class BlenderTask implements Serializable {
         System.out.println("TASK | Generating tile scripts for " + taskID);
         for (int i = startFrame; i < endFrame + 1; i++) {
             String frameID = String.format("%s_%03d_%03d", taskID, Integer.valueOf(frameCount), i);
-            File[] tileScripts = generateTileSplitScript(subtaskDir, frameID, i, renderOutputType, computeRate);
-//                System.out.println("TASK | Tile Scripts : " + tileScripts.length + " | Path : " + tileScripts[i].getAbsolutePath());
-            blenderFrameTask frameTask = new blenderFrameTask(frameID,
+            File[] tileScripts = generateTileSplitScript(subtaskDir, frameID, computeRate);
+                System.out.println("TASK | Tile Scripts : " + tileScripts.length + " | Path : " + tileScripts[i].getAbsolutePath());
+            vrayFrameTask frameTask = new vrayFrameTask(frameID,
                     taskID,
                     frameCategory,
+                    renderOutputType,
                     i,
                     subtaskCountPerFrame,
                     application,
@@ -101,23 +107,7 @@ public class BlenderTask implements Serializable {
         return frameCount;
     }
 
-    public int calculateMultiplier(File renderfile, int frameCount, int computeRate) {
-//            long optimalSize = 100000; // 100 kb for optimal file transfer and downloading between Node and Server
-        long sizePerFrame = renderfile.length() / frameCount;
-//            long optimized = sizePerFrame / (sizePerFrame / computeRate);
-
-        int multiplier = (int) Math.sqrt(1);
-        if (renderOutputType.equals("targa")) {
-            multiplier = (int) Math.sqrt(1);
-        } else {
-            if (computeRate >= 1) {
-                multiplier = (int) Math.sqrt(computeRate);
-            }
-        }
-        return multiplier;
-    }
-
-    public File[] generateTileSplitScript(File outputDir, String frameID, int frame, String renderOutputType, int computeRate)   // TODO -  Generates a general python script with instructions and information on rendering subtasks with Blender
+    public File[] generateTileSplitScript(File outputDir, String frameID, int computeRate)   // TODO -  Generates a general python script with instructions and information on rendering subtasks with Blender
             throws IOException {                                                                                        // TODO - 1. Takes a multiplier to calculate TileBorders
         TileBorder[] tileBorders = calcTileBorders(computeRate);
         File[] allScripts = new File[tileBorders.length];
@@ -126,60 +116,18 @@ public class BlenderTask implements Serializable {
 
         for (int i=0; i<tileBorders.length; i++) {
             TileBorder tileBorder = tileBorders[i];
-            String scriptName = String.format("%s_%s_%03d", frameID, "TS", tileCounter++).concat(".py");
+            String scriptName = String.format("%s_%s_%03d", frameID, "TS", tileCounter++).concat(".txt");
             File script = new File(outputDir, scriptName);
 
+            int top = (int) tileBorder.getTop();
+            int left = (int) tileBorder.getLeft();
+            int right = (int) tileBorder.getRight();
+            int bottom = (int) tileBorder.getBottom();
+
             PrintWriter fout = new PrintWriter(new FileWriter(script));
-            fout.println("import bpy");
-            fout.println("import os");
+            fout.println(top + "," + left + "," + right + "," + bottom);
+//            fout.println("vray -sceneFile=" + );
 
-//            bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
-//            bpy.context.preferences.addons['cycles'].preferences.devices[0].use = True
-
-            // THIS SECTION OF THE TASK SCRIPT ENABLES GPU RENDERING IF POSSIBLE
-//            fout.println("def enable_gpus(device_type, use_cpus=False):");
-//            fout.println("    preferences = bpy.context.preferences");
-//            fout.println("    cycles_preferences = preferences.addons[\"cycles\"].preferences");
-//            fout.println("    cuda_devices, opencl_devices = cycles_preferences.get_devices()");
-//            fout.println("    if device_type == \"CUDA\":");
-//            fout.println("        devices = cuda_devices");
-//            fout.println("    elif device_type == \"OPENCL\":");
-//            fout.println("        devices = opencl_devices");
-//            fout.println("    else:");
-//            fout.println("        raise RuntimeError(\"Unsupported device type\")");
-//            fout.println("    activated_gpus = []");
-//            fout.println("    for device in devices:");
-//            fout.println("        if device.type == \"CPU\":");
-//            fout.println("          device.use = use_cpus");
-//            fout.println("        else:");
-//            fout.println("          device.use = True");
-//            fout.println("          activated_gpus.append(device.name)");
-//            fout.println("    cycles_preferences.compute_device_type = device_type");
-//            fout.println("    bpy.context.scene.cycles.device = \"GPU\"");
-//            fout.println("    return activated_gpus");
-//            fout.println("enable_gpus(\"CUDA\")");
-
-            // THIS SECTION OF THE TASK SCRIPT SPLITS THE TASK INTO SUBTASKS BY SPECIFYING WHICH PORTION OF THE ORIGINAL IMAGE IS TO BE RENDERED
-            fout.println("left = " + Float.toString(tileBorder.getLeft()));
-            fout.println("right = " + Float.toString(tileBorder.getRight()));
-            fout.println("bottom = " + Float.toString(tileBorder.getBottom()));
-            fout.println("top = " + Float.toString(tileBorder.getTop()));
-            fout.println("scene  = bpy.context.scene");
-            fout.println("render = scene.render");
-            fout.println("render.use_border = True");
-            fout.println("render.use_crop_to_border = True");
-            fout.println("render.image_settings.file_format = " + "'" + renderOutputType.toUpperCase() + "'");
-//            fout.println("render.image_settings.color_mode = 'RGB'");
-            fout.println("render.use_file_extension = True");
-            fout.println("render.border_max_x = right");
-            fout.println("render.border_min_x = left");
-            fout.println("render.border_max_y = top");
-            fout.println("render.border_min_y = bottom");
-            // from the location of the fetched file (blendcache) to ../tmp/
-//            fout.println("scene.frame_start = " + startFrame);          // startFrame parameter does nothing for singleFrame Tasks
-//            fout.println("scene.frame_end = " + endFrame);              // endFrame parameter does nothing for multiFrame Tasks
-            // if it's not used this line, the scene uses their original parameters...
-//            fout.println("bpy.ops.render.render(animation=True)");
             fout.flush();
             fout.close();
             allScripts[i] = script;
@@ -219,21 +167,27 @@ public class BlenderTask implements Serializable {
                     bottom = chunk * (float) (y - 1);
                     top = chunk * (float) y;
                 }
+                float topV = (float) round(top*renderHeight, 0);
+                float leftV = (float) round(left*renderWidth, 0);
+                float rightV = (float) round(right*renderWidth, 0);
+                float bottomV = (float) round(bottom*renderHeight, 0);
 
-
-
-                tileBorders[t] = new TileBorder(left, right, bottom, top);
+                tileBorders[t] = new TileBorder(leftV, rightV, bottomV, topV);
             }
             t++;
         }
         return tileBorders;
     }
 
-    public String getTaskID() {
-        return taskID;
+    public static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        BigDecimal bd = BigDecimal.valueOf(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 
-    public ArrayList<blenderFrameTask> getFrameTaskQueue() {
+    public ArrayList<vrayFrameTask> getFrameTaskQueue() {
         return frameTasks;
     }
 
@@ -241,20 +195,22 @@ public class BlenderTask implements Serializable {
         this.totalNumberOfSubtasks = numberOfSubtasks;
     }
 
-    public class blenderFrameTask {
+    public class vrayFrameTask {
         private String frameID;
         private String taskID;
         private String frameCategory;
+        private String renderOutputType;
         private int frame;
         private int subtaskCount;
         private String application;
         private String renderfileName;
         private File[] tileScripts;
-        private ArrayList<blenderSubtask> subtaskQueue = new ArrayList<>();
+        private ArrayList<vraySubtask> subtaskQueue = new ArrayList<>();
 
-        public blenderFrameTask(String frameID,
+        public vrayFrameTask(String frameID,
                                 String taskID,
                                 String frameCategory,
+                                String renderOutputType,
                                 int frame,
                                 int subtaskCount,
                                 String application,
@@ -264,6 +220,7 @@ public class BlenderTask implements Serializable {
             this.frameID = frameID;
             this.taskID = taskID;
             this.frameCategory = frameCategory;
+            this.renderOutputType = renderOutputType;
             this.frame = frame;
             this.subtaskCount = subtaskCount;
             this.application = application;
@@ -279,9 +236,10 @@ public class BlenderTask implements Serializable {
             // Based on the number of subtasks, the tileScripts are generated accordingly for Nodes to render.
             for (int i = 0; i < subtaskCount; i++) {
                 String subtaskID = String.format("%s_%03d", frameID, counter);
-                blenderSubtask subtask = new blenderSubtask(taskID,
+                vraySubtask subtask = new vraySubtask(taskID,
                         subtaskID,
                         frameCategory,
+                        renderOutputType,
                         frame,
                         renderfileName,
                         application,
@@ -292,7 +250,7 @@ public class BlenderTask implements Serializable {
             }
         }
 
-        public ArrayList<blenderSubtask> getSubtaskQueue() {
+        public ArrayList<vraySubtask> getSubtaskQueue() {
             return subtaskQueue;
         }
 
@@ -301,19 +259,21 @@ public class BlenderTask implements Serializable {
         }
     } // END OF FRAME_TASK CLASS
 
-    public class blenderSubtask {
+    public class vraySubtask {
 
         private String taskID;
         private String subtaskID;
         private String frameCategory;
+        private String renderOutputType;
         private int frame;  // Frame to be rendered
         private String renderfileName;
         private String application;
         private File tileScript;
 
-        public blenderSubtask(String taskID,
+        public vraySubtask (String taskID,
                               String subtaskID,
                               String frameCategory,
+                              String renderOutputType,
                               int frame,
                               String renderfileName,
                               String application,
@@ -322,6 +282,7 @@ public class BlenderTask implements Serializable {
             this.taskID = taskID;
             this.subtaskID = subtaskID;
             this.frameCategory = frameCategory;
+            this.renderOutputType = renderOutputType;
             this.frame = frame;
             this.renderfileName = renderfileName;
             this.application = application;

@@ -1,5 +1,7 @@
 package nebula.nebulaserver;
 
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.v2.DbxClientV2;
 import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.startup.Tomcat;
@@ -30,6 +32,9 @@ public class Server {
     private static File nebuladatabase;
     private static String RootPath = new File("").getAbsolutePath();                                                         // RootDir = server /app directory path
     private static File rootDir = new File(RootPath);
+    public static String dbxToken = "ZnNTqlyhyTYAAAAAAAAAAW1ZRU6Q0cXTS00DH1jn4eoQf3CNU_QRitIG79JblDNi";
+    final static DbxRequestConfig config = DbxRequestConfig.newBuilder("dropbox/nebula-render").build();
+    final static DbxClientV2 client = new DbxClientV2(config, Server.dbxToken);
 
     public static void main(String[] args) throws Exception {
        startServer();
@@ -123,7 +128,7 @@ public class Server {
 
         CloseableHttpResponse response = httpClient.execute(request);
         int status = response.getStatusLine().getStatusCode();
-        System.out.println("Prompt Receiver STATUS : " + status);
+        System.out.println("Prompt ResultReceiver STATUS : " + status);
         System.out.println("");
 
     }

@@ -7,7 +7,7 @@ public class NodeUser {
 
         private String nodeEmail;
         private LinkedHashMap<String, Node> nodesMap = new LinkedHashMap<>();
-        private LinkedHashMap<String, Receiver.SubtaskCosts> nodeUserCompletedSubtasksMap = new LinkedHashMap<>();
+        private LinkedHashMap<String, ResultReceiver.SubtaskCosts> nodeUserCompletedSubtasksMap = new LinkedHashMap<>();
 
         public NodeUser(String nodeEmail) {
             this.nodeEmail = nodeEmail;
@@ -21,7 +21,7 @@ public class NodeUser {
             return nodesMap;
         }
 
-        public LinkedHashMap<String, Receiver.SubtaskCosts> getAllCompletedSubtasks() {
+        public LinkedHashMap<String, ResultReceiver.SubtaskCosts> getAllCompletedSubtasks() {
             return nodeUserCompletedSubtasksMap;
         }
 
@@ -40,7 +40,7 @@ public class NodeUser {
 
         // addToCompletedSubtasks adds completed subtasks and its details to the NodeUser that completed it for reference purposes.
         //  It also calls the addSubtaskToNode method to credit the completed subtask to the specific Node that completed it.
-        public void addToCompletedSubtasks(String deviceID, String ipAddress, Receiver.SubtaskCosts subtaskCost) {
+        public void addToCompletedSubtasks(String deviceID, String ipAddress, ResultReceiver.SubtaskCosts subtaskCost) {
         Node node = nodesMap.get(ipAddress);
         String subtaskID = subtaskCost.subtaskID;
         if (nodeUserCompletedSubtasksMap.get(subtaskID) == null) {
@@ -63,7 +63,7 @@ public class NodeUser {
             private String score;
             private String ipAddress;
             private int nodeQueue;
-            private LinkedHashMap<String, Receiver.SubtaskCosts> nodeCompletedSubtasksMap = new LinkedHashMap<>();
+            private LinkedHashMap<String, ResultReceiver.SubtaskCosts> nodeCompletedSubtasksMap = new LinkedHashMap<>();
 
             public Node(String nodeEmail
                     , String productVersion
@@ -78,7 +78,7 @@ public class NodeUser {
                 this.ipAddress = ipAddress;
             }
 
-            public void addSubtasksToNode(Receiver.SubtaskCosts subtaskCost) {
+            public void addSubtasksToNode(ResultReceiver.SubtaskCosts subtaskCost) {
 
                 if (nodeCompletedSubtasksMap.isEmpty()) {
                     nodeCompletedSubtasksMap.put(subtaskCost.subtaskID, subtaskCost);
@@ -97,7 +97,7 @@ public class NodeUser {
                 System.out.println("CHECK | Completed Subtasks for " + nodeEmail + " [" + ipAddress + "] : " + nodeCompletedSubtasksMap.size());
             }
 
-            public LinkedHashMap<String, Receiver.SubtaskCosts> getCompletedSubtasks() {
+            public LinkedHashMap<String, ResultReceiver.SubtaskCosts> getCompletedSubtasks() {
                 return nodeCompletedSubtasksMap;
             }
 
