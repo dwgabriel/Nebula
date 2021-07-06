@@ -32,14 +32,14 @@ public class Server {
     private static File nebuladatabase;
     private static String RootPath = new File("").getAbsolutePath();                                                         // RootDir = server /app directory path
     private static File rootDir = new File(RootPath);
-    public static String dbxToken = "ZnNTqlyhyTYAAAAAAAAAAW1ZRU6Q0cXTS00DH1jn4eoQf3CNU_QRitIG79JblDNi";
+    public static String dbxToken = "************************************************************";
+    public static String mailGunApiKey = "***********************************************";
     final static DbxRequestConfig config = DbxRequestConfig.newBuilder("dropbox/nebula-render").build();
     final static DbxClientV2 client = new DbxClientV2(config, Server.dbxToken);
 
     public static void main(String[] args) throws Exception {
        startServer();
-        System.out.println("Server down.");
-
+        System.out.println("SERVER | Server down.");
     }
 
     private static void createDatabase() {
@@ -56,7 +56,7 @@ public class Server {
             tasks.mkdir();
             earnings.mkdir();
         } else {
-            System.out.println("Database already exists. ");
+            System.out.println("SERVER | Database already exists. ");
         }
     }
 
@@ -67,7 +67,7 @@ public class Server {
         if(now.compareTo(nextRun) > 0)
             nextRun = nextRun.plusDays(1);
 
-        System.out.println(dtf.format(now));
+        System.out.println("SERVER | " + dtf.format(now));
 
         Duration duration = Duration.between(now, nextRun);
         long initialDelay = duration.getSeconds();
@@ -76,7 +76,7 @@ public class Server {
             @Override
             public void run() {
                 try {
-                    promptReceiver();
+                    promptResultsReceiver("EARNINGS");
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -89,8 +89,27 @@ public class Server {
                 TimeUnit.SECONDS);
     }
 
+    private static void startResultCheckTimer() {
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    promptResultsReceiver("PENDING");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        };
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(runnable,
+                60,
+                60,
+                TimeUnit.SECONDS);
+    }
     private static void startServer() throws Exception {
         startEmailTimer();
+        startResultCheckTimer();
         String homepageDirLocation = "src/main/webapp";
         Tomcat tomcat = new Tomcat();
         // Requires connection to Front End : Webpage, web-app, UI/UX
@@ -102,7 +121,7 @@ public class Server {
         tomcat.setPort(Integer.valueOf(webPort));
         StandardContext ctx = (StandardContext) tomcat.addWebapp("/", new File(homepageDirLocation).getAbsolutePath());
 
-        System.out.println("Configuring app with basedir: " + new File(homepageDirLocation).getAbsolutePath());
+        System.out.println("SERVER | Configuring app with basedir: " + new File(homepageDirLocation).getAbsolutePath());
 
         File additionWebInfClasses = new File("target/classes");
         WebResourceRoot resources = new StandardRoot(ctx);
@@ -112,11 +131,11 @@ public class Server {
         createDatabase();
 
         tomcat.start();
-        System.out.println("Server started.");
+        System.out.println("SERVER | Server started.");
         tomcat.getServer().await();
     }
 
-    public static void promptReceiver() throws IOException {
+    public static void promptResultsReceiver(String prompt) throws IOException {
         String receiverServlet = "https://nebula-server.herokuapp.com/complete";
         CloseableHttpClient httpClient = HttpClients.createDefault();
 
@@ -124,12 +143,10 @@ public class Server {
                 .get(receiverServlet)
                 .build();
 
-        request.addHeader("PROMPT", "TRUE");
+        request.addHeader("PROMPT", prompt);
 
         CloseableHttpResponse response = httpClient.execute(request);
         int status = response.getStatusLine().getStatusCode();
-        System.out.println("Prompt ResultReceiver STATUS : " + status);
-        System.out.println("");
-
+        System.out.println("SERVER | Prompt ResultReceiver (" + prompt + ") - STATUS : " + status);
     }
 }
